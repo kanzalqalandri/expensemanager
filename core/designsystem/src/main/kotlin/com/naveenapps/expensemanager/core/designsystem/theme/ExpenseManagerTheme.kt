@@ -6,15 +6,21 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import com.naveenapps.designsystem.theme.NaveenAppsTheme
 
@@ -157,6 +163,44 @@ val DarkExtendedColors = ExpenseManagerExtendedColors(
 
 val LocalExpenseManagerColors = staticCompositionLocalOf { LightExtendedColors }
 
+// Layouts were tuned on a ~411dp-wide phone at the default text size. Narrower screens, or a
+// larger system text size, leave less room per character, so text is shrunk to fit. The floor
+// keeps an enlarged system text size still larger than the default.
+private const val REFERENCE_SCREEN_WIDTH_DP = 411f
+private const val MIN_TEXT_SCALE = 0.85f
+
+@Composable
+private fun narrowScreenTextScale(): Float {
+    val widthInSp = LocalConfiguration.current.screenWidthDp / LocalDensity.current.fontScale
+    return (widthInSp / REFERENCE_SCREEN_WIDTH_DP).coerceIn(MIN_TEXT_SCALE, 1f)
+}
+
+private fun TextUnit.scaled(factor: Float): TextUnit = if (isSp) this * factor else this
+
+private fun TextStyle.scaled(factor: Float): TextStyle = copy(
+    fontSize = fontSize.scaled(factor),
+    lineHeight = lineHeight.scaled(factor),
+    letterSpacing = letterSpacing.scaled(factor),
+)
+
+private fun Typography.scaled(factor: Float): Typography = copy(
+    displayLarge = displayLarge.scaled(factor),
+    displayMedium = displayMedium.scaled(factor),
+    displaySmall = displaySmall.scaled(factor),
+    headlineLarge = headlineLarge.scaled(factor),
+    headlineMedium = headlineMedium.scaled(factor),
+    headlineSmall = headlineSmall.scaled(factor),
+    titleLarge = titleLarge.scaled(factor),
+    titleMedium = titleMedium.scaled(factor),
+    titleSmall = titleSmall.scaled(factor),
+    bodyLarge = bodyLarge.scaled(factor),
+    bodyMedium = bodyMedium.scaled(factor),
+    bodySmall = bodySmall.scaled(factor),
+    labelLarge = labelLarge.scaled(factor),
+    labelMedium = labelMedium.scaled(factor),
+    labelSmall = labelSmall.scaled(factor),
+)
+
 /**
  * App theme. Keeps the typography and shapes from [NaveenAppsTheme] and swaps in
  * the website colour scheme.
@@ -170,9 +214,14 @@ fun ExpenseManagerTheme(
         CompositionLocalProvider(
             LocalExpenseManagerColors provides if (isDarkTheme) DarkExtendedColors else LightExtendedColors,
         ) {
+            val textScale = narrowScreenTextScale()
+            val baseTypography = MaterialTheme.typography
+            val typography = remember(baseTypography, textScale) {
+                if (textScale < 1f) baseTypography.scaled(textScale) else baseTypography
+            }
             MaterialTheme(
                 colorScheme = if (isDarkTheme) ExpenseManagerDarkColorScheme else ExpenseManagerLightColorScheme,
-                typography = MaterialTheme.typography,
+                typography = typography,
                 shapes = MaterialTheme.shapes,
                 content = content,
             )
